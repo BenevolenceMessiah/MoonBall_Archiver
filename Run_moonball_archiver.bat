@@ -67,7 +67,7 @@ echo ---------------------------------------------------------------
 :Menu1
 echo ---------------------------------------------------------------
 echo Please choose from the following options:
-echo - This program assumes that you have Git and Python 3.10 installed.
+echo - This program assumes that you have Git, Rust, and Python 3.10 installed.
 echo - Other versions of Python may work; simply tweak "py -3.xx -m venv .venv" accordingly.
 echo - Press Ctrl+c to exit at any time!
 echo ---------------------------------------------------------------
@@ -75,7 +75,7 @@ echo 1) Install MoonBall Archiver.
 echo 2) Run MoonBall Archiver via CLI.
 echo 3) Run MoonBall Archiver via GUI.
 echo 4) Run MoonBall Archiver via Docker Desktop
-echo 4) Install/reinstall/fix Python, Docker Desktop, and/or Git. (Only do this if you don't have these installed
+echo 4) Install/reinstall/fix Python, Docker Desktop, Rust, and/or Git. (Only do this if you don't have these installed
 echo    or in the event you encounter errors related to Python or Git.)
 echo C) Exit
 echo U) Update repo.
@@ -172,6 +172,7 @@ echo ---------------------------------------------------------------
 echo 9) Install Git.
 echo 10) Install Python 3.10. (Make sure to enable PATH)!
 echo 11) Install Docker Desktop (Only necessary if you want to run the dockerfile)
+echo 12) Install Rust.
 echo M) Main Menu
 echo R) Restart the .bat file (do this after installing either or any of these).
 echo C) Exit
@@ -181,6 +182,7 @@ set /P option=Enter your choice:
 if %option% == 9 goto GitInstall
 if %option% == 10 goto PythonInstall
 if %option% == 11 goto DockerDesktop
+if %option% == 12 goto InstallRust
 if %option% == R goto RestartCMD
 if %option% == r goto RestartCMD
 if %option% == M goto Menu1
@@ -217,6 +219,22 @@ echo Restarting...
 echo Deleting installer .exe file if it exists...
 echo ---------------------------------------------------------------
 if exist docker-desktop-installer.exe del docker-desktop-installer.exe
+start call Run_moonball_archiver.bat
+exit
+
+:RustInstall
+echo Installing Rust
+echo ---------------------------------------------------------------
+cd /d %~dp0
+call curl "https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe" -o rustup-init.exe
+start /wait rustup-init.exe -y
+echo Once the install is complete, continue.
+echo ---------------------------------------------------------------
+timeout /t -1
+echo Restarting...
+echo Deleting installer .exe file if it exists...
+echo ---------------------------------------------------------------
+if exist rustup-init.exe del rustup-init.exe
 start call Run_moonball_archiver.bat
 exit
 

@@ -131,6 +131,7 @@ Windows users can fully install and operate the MoonBall Archiver by:
 
 ### Non-Windows/Manual Installation
 
+Note: Make sure you have Rust Installed `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 Follow these steps to install MoonBall Archiver in a virtual environment using Python 3.10:
 
 1. **Clone the Repository**
