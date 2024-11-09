@@ -1,7 +1,7 @@
 zstandard==0.18.0
 brotli==1.0.9
-# lzma (Deprecated, part of Python Stnadard Library since Python 3.3)
-hashlib
+# lzma (Deprecated, part of Python Standard Library since Python 3.3)
+# hashlib (Also Dprecated and included with the Standard Libary)
 tqdm==4.62.3
 scikit-learn==1.0.2
 numpy==1.21.4
