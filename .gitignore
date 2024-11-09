@@ -1,0 +1,5 @@
+# System Files
+
+.venv/
+.venv/*
+sound.vbs
