@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -20,13 +19,19 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Upgrade pip
+      run: pip install --upgrade pip
+
+    - name: Install Rust
       run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pip install -r requirements.txt
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source $HOME/.cargo/env
+
+    - name: Install dependencies
+      run: pip install --prefer-binary -r requirements.txt
 
     - name: Run tests
       run: |
+        python -m venv .venv
         source .venv/bin/activate
         pytest
