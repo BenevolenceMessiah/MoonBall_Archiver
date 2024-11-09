@@ -7,4 +7,4 @@ scikit-learn==1.0.2
 numpy==1.21.4
 transformers==4.13.0
 Pillow==8.4.0
-tkinter
+# tkinter ( Run "sudo apt-get install python3-tk" if you get any error on Linux)
