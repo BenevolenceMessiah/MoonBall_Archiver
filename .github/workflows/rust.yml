@@ -1,0 +1,46 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        profile: minimal
+
+    - name: Cache Cargo registry
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    - name: Build Project
+      run: cargo build --release
+
+    - name: Run Tests
+      run: cargo test
+
+    - name: Run Clippy
+      run: cargo clippy -- -D warnings
+
+    - name: Run Rustfmt
+      run: cargo fmt -- --check

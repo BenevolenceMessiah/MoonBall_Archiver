@@ -12,3 +12,4 @@ cryptography==41.0.3
 tkinterdnd2==0.3.0
 concurrent-log-handler==0.9.24
 pytest==7.4.2
+torch>=1.9.0

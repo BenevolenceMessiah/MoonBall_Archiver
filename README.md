@@ -1,4 +1,4 @@
-# MoonBall Archiver
+# MoonBall Archiver (Rust Implementation)
 
 Welcome to **MoonBall Archiver**, a cutting-edge file compression and archiving solution designed to redefine the way we store and manage digital data. MoonBall is a forward-thinking, highly efficient, and AI-powered archiver that leverages advanced compression techniques to bring you the best currently possible performance for your storage needs. With a unique blend of machine learning, chunk-level adaptability, and interoperability, MoonBall aims to be the future of digital archiving.
 
@@ -11,7 +11,7 @@ Welcome to **MoonBall Archiver**, a cutting-edge file compression and archiving 
 
 ### Adaptive Compression Schemes
 
-MoonBall uses a machine learning model to determine the optimal compression algorithm for each data chunk. It chooses from multiple algorithms such as **Brotli**, **LZMA**, and **Zstandard** (Zstd), depending on the type of data and its compressibility. This results in a highly efficient compression approach tailored specifically to each data type. There are currently 3 Compression Schemes. Fast, Balanced (being the default)and Max.
+MoonBall uses a machine learning model to determine the optimal compression algorithm for each data chunk. It chooses from multiple algorithms such as **Brotli**, **LZMA**, and **Zstandard** (Zstd), depending on the type of data and its compressibility. This results in a highly efficient compression approach tailored specifically to each data type. There are currently 3 Compression Schemes: Fast, Balanced (being the default), and Maximum.
 
 ### Chunk-Level Compression
 
@@ -19,7 +19,7 @@ The MoonBall Archiver first indexes and then divides files into logical chunks f
 
 ### Comprehensive Graphical User Interface (GUI)
 
-MoonBall includes a user-friendly GUI, allowing even beginners to easily compress and decompress files or directories. This interface provides features like:
+MoonBall includes a user-friendly GUI, implemented in **Rust** using **Egui**, allowing even beginners to easily compress and decompress files or directories. This interface provides features like:
 
 - Adding files or directories for compression
 - Saving the resulting MoonBall archive
@@ -28,11 +28,19 @@ MoonBall includes a user-friendly GUI, allowing even beginners to easily compres
 
 ### Machine Learning Enhancements
 
-MoonBall integrates **Transformers.js** to generate embeddings for each file chunk, which enhances the retrieval, clustering, and deduplication of data. These embeddings also enable semantic-based data retrieval and adaptive chunking.
+MoonBall integrates **Transformers.js** (Python FFI in Rust version) to generate embeddings for each file chunk, which enhances the retrieval, clustering, and deduplication of data. These embeddings also enable semantic-based data retrieval and adaptive chunking.
 
 ### Integration with AI Tools
 
-MoonBall currently leverages **Retrieval-Augmented Generation (RAG)** for enhanced data retrieval, clustering, and **semantic-based search**. This further utilizes **Transformers** models for file content analysis and embedding generation. This enables MoonBall to offer features like `semantic search`, allowing users to find files based on context rather than exact filenames like traditional file manager indexing and searching, moreover, while the .mnbl archive is still compressed.
+MoonBall leverages **Retrieval-Augmented Generation (RAG)** for enhanced data retrieval, clustering, and **semantic-based search**. This utilizes **Transformers** models for file content analysis and embedding generation, allowing users to find files based on context rather than exact filenames, even while the `.mnbl` archive is still compressed.
+
+### Two-Factor Authentication (2FA)
+
+The Rust implementation introduces an optional **Two-Factor Authentication (2FA)** feature for additional security when accessing encrypted archives. This uses OTP (One-Time Password) verification to ensure that only authorized users can extract the contents of an archive.
+
+### Extended Encryption Options
+
+MoonBall supports strong encryption for archives, with options for different algorithms, including **AES-ECB** and **AES-CBC** modes. These encryption features help protect sensitive data stored within MoonBall archives.
 
 ### Fun Emoji Extensions
 
@@ -40,7 +48,7 @@ Set the archive file extension (`.mnbl` or `.🌕`) in keeping with the spirit o
 
 ### Command-Line Interface (CLI)
 
-For more advanced users, MoonBall provides a powerful CLI that allows adding files or directories, selecting compression schemes, running semantic-searches, and extracting archives directly from the terminal.
+For more advanced users, MoonBall provides a powerful CLI that allows adding files or directories, selecting compression schemes, running semantic-searches, and extracting archives directly from the terminal. The CLI supports enabling encryption, using 2FA, and other advanced options.
 
 ### Multi-Platform Compatibility
 
@@ -50,21 +58,9 @@ The MoonBall Archiver is designed with compatibility in mind, providing cross-pl
 
 MoonBall has been designed with extensibility at its core, allowing for future enhancements:
 
-- **Rust Implementation**: A parallel implementation in **Rust** to complement the Python prototype. This Rust version could mix and match existing Python and Rust libraries for performance enhancements via Moon.
-- **Foreign Function Interface (FFI)**: To achieve interoperability, MoonBall leverages compression libraries via FFI or other binding mechanisms, which is crucial for integration into other languages like Moon.
-- **Moon Integration**: Utilizing Moon's standard library modules for I/O, math, and other functionalities to streamline development.
-
-## How It Works
-
-MoonBall Archiver operates in a structured and efficient sequence:
-
-1. **Indexing**: First, the contents of the files are indexed, which involves creating a structured list of all files and chunks. This index serves as the foundation for efficient retrieval, compression, and decompression.
-
-2. **Chunking**: Files are then divided into logical chunks, each of which is compressed independently. This chunking process ensures that each chunk is handled in the most efficient way possible, improving both compression ratios and processing speed.
-
-3. **Embeddings and Index Storage**: Embeddings are generated for each chunk, which help in understanding the context and content of data. The index and embeddings are stored in the header of the .mnbl archive file, allowing for efficient data retrieval and management.
-
-4. **Checksum Footer**: A checksum is computed for the index and stored in the footer of the archive. This ensures data integrity and allows for verification during extraction.
+- **Rust Implementation**: A parallel implementation in **Rust** has been created to complement the Python prototype. This Rust version enhances performance, security, and scalability.
+- **Foreign Function Interface (FFI)**: To achieve interoperability, MoonBall leverages compression libraries via FFI, integrating with Python-based machine learning tools for tasks like embedding generation.
+- **Moon Integration**: Utilizing Moon's standard library modules for file I/O and other basic functionalities to streamline development and make MoonBall a perfect match for the Moon ecosystem.
 
 ## Key Terms
 
@@ -90,11 +86,15 @@ A numeric representation of a file chunk generated using a machine learning mode
 
 ### Foreign Function Interface (FFI)
 
-A mechanism that allows the Moon Programming Language and MoonBall Archiver to call functions written in other programming languages like **C** or **Rust**, enabling interoperability with existing libraries.
+A mechanism that allows the MoonBall Archiver to call functions written in other programming languages like **Python**, enabling interoperability with existing libraries.
 
 ### Machine Learning Model
 
-MoonBall uses a **Random Forest Classifier** to predict the most suitable compression algorithm for each file chunk based on features such as entropy and file extension.
+MoonBall uses a **Random Forest Classifier** (Python version) or predictive rules to select the most suitable compression algorithm for each file chunk based on features such as entropy and file extension.
+
+### 2FA (Two-Factor Authentication)
+
+A security feature that requires users to provide a One-Time Password (OTP) generated from a secret key, adding an additional layer of security when extracting files from encrypted archives.
 
 ## Command-Line Flags
 
@@ -108,6 +108,7 @@ Here is a list of available command-line flags:
 - `--gui`: Launch the graphical user interface.
 - `--search`: Perform a semantic search query to find files based on context.
 - `--encryption`: Enable strong password-protected encryption for your archive.
+- `--2fa`: Enable Two-Factor Authentication for added security when extracting.
 - `--help`: Display a list of available command-line flags and their usage.
 
 ## Installation
@@ -131,7 +132,6 @@ Windows users can fully install and operate the MoonBall Archiver by:
 
 ### Non-Windows/Manual Installation
 
-Note: Make sure you have Rust Installed `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 Follow these steps to install MoonBall Archiver in a virtual environment using Python 3.10:
 
 1. **Clone the Repository**
@@ -170,6 +170,17 @@ Follow these steps to install MoonBall Archiver in a virtual environment using P
 5. **Add the MoonBall Icon**
    - Place the `moonball_icon.png` file in an `assets` folder located in the same directory as the Python script (`moonball_archiver.py`).
 
+6. **Install Rust Toolchain**
+
+   If you want to use the Rust implementation, make sure to have Rust installed:
+
+   ```sh
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   rustup update
+   ```
+
+   Additionally, place `moonball_archiver.rs` and `generate_embedding.py` in the root directory.
+
 ## Usage
 
 ### Via Command-Line Interface (CLI)
@@ -179,13 +190,13 @@ Follow these steps to install MoonBall Archiver in a virtual environment using P
 To add files or directories to a MoonBall archive:
 
 ```sh
-python moonball_archiver.py --add file1.txt dir1 --output archive.mnbl
+cargo run --release -- --add file1.txt dir1 --output archive.mnbl
 ```
 
 Or using the optional emoji-based extension:
 
 ```sh
-python moonball_archiver.py --add file1.txt dir1 --output archive.🌕
+cargo run --release -- --add file1.txt dir1 --output archive.🌕
 ```
 
 #### Extracting Files from an Archive
@@ -193,7 +204,7 @@ python moonball_archiver.py --add file1.txt dir1 --output archive.🌕
 To extract an archive:
 
 ```sh
-python moonball_archiver.py --extract archive.mnbl --output extracted_files/
+cargo run --release -- --extract archive.mnbl --output extracted_files/ --otp 123456
 ```
 
 #### Launching the GUI
@@ -201,7 +212,7 @@ python moonball_archiver.py --extract archive.mnbl --output extracted_files/
 To launch the MoonBall GUI:
 
 ```sh
-python moonball_archiver.py --gui
+cargo run --release -- --gui
 ```
 
 ### Graphical User Interface (GUI)
@@ -210,6 +221,7 @@ python moonball_archiver.py --gui
 - **Add Directory**: Use the "Add Directory" button to add all files from a folder.
 - **Compress to Archive**: After adding files, click "Compress to Archive" to create the `.mnbl` archive.
 - **Extract Archive**: Select an archive and destination directory to extract the files.
+- **2FA Extraction**: If 2FA is enabled, you will be prompted to enter an OTP to proceed.
 
 ## Example Scenarios
 
@@ -224,6 +236,10 @@ A user has several large video files they need to archive efficiently. Using the
 ### Scenario 3: Semantic File Retrieval
 
 With its RAG-based retrieval system, MoonBall provides the potential for **semantic-based search** in future versions. A user could search for files based on context or descriptions instead of specific filenames, revolutionizing data accessibility.
+
+### Scenario 4: Secure Extraction with 2FA
+
+A user wants to protect their archive from unauthorized access. They enable **Two-Factor Authentication (2FA)** when creating the archive. To extract the files, the user must enter a valid One-Time Password (OTP) to proceed, ensuring the safety of their sensitive data.
 
 ## Further Expansion
 

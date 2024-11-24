@@ -1,0 +1,141 @@
+# MoonBall Archiver Configuration File
+
+# Preset options for model selection:
+#   'speed'     - Uses lighter models optimized for faster performance.
+#   'accuracy'  - Uses more advanced models for higher quality embeddings.
+#   'default'   - A balanced approach between speed and accuracy.
+#   'custom'    - Allows users to manually select models for each category.
+#   'fallback'  - Uses a general-purpose fallback model for all file types.
+preset: 'default'
+
+# Custom model selection for different file types (only applicable if preset is 'custom')
+custom_models:
+  Text: distilbert-base-uncased
+  Image: CLIP
+  Audio: wav2vec 2.0
+  Video: S3D
+  Structured_Data: TabNet
+  Code: CodeBERT
+
+# Multi-modal model preference (specifies the model to use if multi-modal is preferred)
+# Available options: CLIP, Florence
+multi_modal_model: CLIP
+
+# Fallback model to use when a specialized model is not available (only applicable if preset is 'fallback')
+# Available options: distilbert-base-uncased, bert-base-uncased, CLIP, ollama, openai
+fallback_model: distilbert-base-uncased
+
+# Fallback model settings for service providers (only applicable if fallback_model is 'ollama' or 'openai')
+fallback_provider_settings:
+  ollama:
+    provider: 'ollama'
+    model: 'AUTODETECT'  # Name of model to run, or AUTODETECT will use the currently running Ollama model.
+    contextLength: 32768  # Context length
+    systemMessage: "You are an AI assistant tasked with governing this .mnbl/.🌕 file. You will answer user queries utilizing the integrated RAG system of embedding and the file index in the header of the .mnbl/.🌕 file. You will tell the user relevant information pertaining to their queries to the best of your ability leveraging available knowledge of the contents of the .mnbl/.🌕 file and your own knowledge-base in general as well as any available tools."
+
+  openai:
+    provider: 'openai'
+    model: 'AUTODETECT'  # Valid options would include all available ChatGPT models through o1 Preview. AUTODETECT with the api base pointed to localhost, a local model could be hosted say via software like ‘text-generation-webui’
+    systemMessage: "You are an AI assistant tasked with governing this .mnbl/.🌕 file. You will answer user queries utilizing the integrated RAG system of embedding and the file index in the header of the .mnbl/.🌕 file. You will tell the user relevant information pertaining to their queries to the best of your ability leveraging available knowledge of the contents of the .mnbl/.🌕 file and your own knowledge-base in general as well as any available tools."
+    contextLength: 32768
+    apiKey: ""
+    apiBase: "http://localhost:5000/v1"
+
+# Caching option for downloaded models (default is 'True')
+# Options: 'True', 'False'
+caching: 'True'
+
+# Model download location
+model_download_path: "./models"
+
+# Logging level for the application
+# Options: DEBUG, INFO, WARNING, ERROR
+logging_level: "INFO"
+
+# Number of threads to use for parallel processing
+# Options: 'auto' or specify the number of threads
+parallel_threads: 'auto'
+
+# Compression level for chunk compression
+# Range from 1 (fastest, least compression) to 9 (slowest, maximum compression)
+compression_level: 9
+
+# Default chunk size in bytes for file indexing and compression
+# The chunk size is adaptive and determined based on the type of data and the compression algorithm used
+chunk_size: adaptive
+
+# Error handling strategy
+# Options: 'continue', 'abort', 'retry'
+error_handling: "continue"
+
+# Auto update for models (default is 'True')
+# Options: 'True', 'False'
+auto_update_models: 'True'
+
+# Compression scheme for MoonBall Archiver
+# Options: 'fast', 'balanced', 'max'
+scheme: 'balanced'
+
+# Preset configurations:
+#   Speed - Lightweight models for faster performance.
+#   Accuracy - Higher quality models for best results.
+#   Default - Balanced models for general use.
+
+preset_configs:
+  speed:
+    custom_models:
+      Text: distilbert-base-uncased
+      Image: ResNet18
+      Audio: YAMNet
+      Video: S3D
+      Structured_Data: TabNet
+      Code: distilbert-base-uncased
+    multi_modal: 'False'
+
+  accuracy:
+    custom_models:
+      Text: bert-base-uncased
+      Image: CLIP
+      Audio: wav2vec 2.0
+      Video: I3D
+      Structured_Data: FT-Transformer
+      Code: CodeBERT
+    multi_modal: 'True'
+
+  default:
+    custom_models:
+      Text: distilbert-base-uncased
+      Image: CLIP
+      Audio: wav2vec 2.0
+      Video: S3D
+      Structured_Data: TabNet
+      Code: CodeBERT
+    multi_modal: 'True'
+
+# Documentation for available custom models and arguments
+#
+# Preset options:
+#   'speed'     - Optimized for faster performance using lightweight models.
+#   'accuracy'  - Uses advanced models to provide higher quality embeddings.
+#   'default'   - Balanced approach, suitable for most general use cases.
+#   'custom'    - Allows manual selection of models for each file type.
+#   'fallback'  - Uses a single fallback model for all file types.
+#
+# Custom model categories:
+#   Text: distilbert-base-uncased, bert-base-uncased
+#   Image: CLIP, ResNet50
+#   Audio: wav2vec 2.0, YAMNet
+#   Video: S3D, I3D
+#   Structured_Data: TabNet, FT-Transformer
+#   Code: CodeBERT, GPT-Neo
+#
+# Multi-modal model options (for multi_modal_model setting):
+#   CLIP - Default multi-modal model for both text and image.
+#   Florence - An alternative multi-modal model.
+#
+# Fallback model options (for fallback_model setting):
+#   distilbert-base-uncased - Lightweight general-purpose text model.
+#   bert-base-uncased - Higher accuracy general-purpose text model.
+#   CLIP - Multi-modal model suitable for both text and image.
+#   ollama - Service provider for fallback with specific settings.
+#   openai - Service provider for fallback with specific settings.

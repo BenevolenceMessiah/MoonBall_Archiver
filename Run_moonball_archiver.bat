@@ -47,7 +47,7 @@ timeout /t 3
 echo As-salamu alaykum!!
 echo detecting presence of repo, git cloning if not detected...
 echo ---------------------------------------------------------------
-if exist docs\ goto Menu1
+if exist tests\ goto Menu1
 git clone https://github.com/BenevolenceMessiah/MoonBall_Archiver.git
 cd MoonBall_Archiver
 git pull
@@ -105,7 +105,7 @@ echo Activating virtual environment
 call .venv\Scripts\activate
 echo --------------------------------------------------------------
 python.exe -m pip install --upgrade pip
-pip install requirements.txt
+pip install -r requirements.txt
 echo Installation complete!
 echo --------------------------------------------------------------
 timeout /t -1
