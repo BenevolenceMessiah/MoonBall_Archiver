@@ -55,8 +55,8 @@ if not exist "%icon_path%" (
 rem Create registry entries for .mnbl
 reg add "HKCR\.mnbl" /ve /d "MoonBallFile" /f
 reg add "HKCR\MoonBallFile" /ve /d "MoonBall File" /f
-reg add "HKCR\MoonBallFile\DefaultIcon" /ve /d "%icon_path%" /f
-reg add "HKCR\MoonBallFile\shell\open\command" /ve /d "\"%~dp0moonball_archiver.py\" \"%%1\"" /f
+reg add "HKCR\MoonBallFile\DefaultIcon" /ve /d "\"%icon_path%\"" /f
+reg add "HKCR\MoonBallFile\shell\open\command" /ve /d "\"%~dp0moonball_archiver.exe\" \"%%1\"" /f
 
 rem Create registry entries for .🌕
 reg add "HKCR\.🌕" /ve /d "MoonBallFile" /f

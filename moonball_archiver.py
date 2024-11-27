@@ -3,8 +3,7 @@ import zstandard as zstd
 import brotli
 import lzma
 import hashlib
-import argparse
-from tqdm import tqdm  # For displaying progress bars
+from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 from sklearn.ensemble import RandomForestClassifier  # Example ML model for decision-making
 import numpy as np
@@ -26,7 +25,7 @@ class MoonBallArchive:
         # Load or initialize embedding model for indexing and retrieval
         self.embedding_model = pipeline('feature-extraction', model='distilbert-base-uncased')
 
-    def add_file(self, file_path, chunk_size=1024 * 1024 * 5):  # Default chunk size: 5MB
+    def add_file(self, file_path, chunk_size=5242880):  # Default chunk size: 5MB
         # Read the file and split into chunks
         with open(file_path, 'rb') as f:
             chunk_id = 0
@@ -99,7 +98,7 @@ class MoonBallArchive:
 
     def generate_embedding(self, chunk):
         # Generate embedding for the chunk using an embedding model
-        return self.embedding_model(chunk.tolist())
+        return self.embedding_model(chunk.tolist())[0][0]
 
     def add_files_parallel(self, file_paths):
         with ThreadPoolExecutor() as executor:
@@ -161,7 +160,7 @@ class MoonBallArchive:
                     data = brotli.decompress(compressed_data)
                 elif file_meta['compression_algo'] == 'lzma':
                     data = lzma.decompress(compressed_data)
-                elif file_meta['compression_algo'] == 'zstd':
+                else:
                     data = zstd.ZstdDecompressor().decompress(compressed_data)
                 
                 # Write the chunk to the output file
@@ -172,21 +171,22 @@ class MoonBallArchive:
 
     def semantic_search(self, query):
         # Generate embedding for the search query
-        query_embedding = self.embedding_model(query)
+        query_embedding = self.embedding_model([query])[0][0]
 
         # Compare with stored embeddings and return relevant files
         results = []
         for file_meta in self.index:
-            similarity = np.dot(query_embedding, file_meta['embedding'][0])  # Simplified similarity calculation
+            similarity = np.dot(query_embedding, file_meta['embedding'])  # Simplified similarity calculation
             if similarity > 0.8:  # Threshold for relevance
                 results.append(file_meta['file_name'])
         return results
 
-    def clean_up_temporary_files(self):
+        def clean_up_temporary_files(self):
         # Remove any temporary files created during compression or extraction
-        for temp_file in self.files:
-            if os.path.exists(temp_file['file_name']):
-                os.remove(temp_file['file_name'])
+            for file_meta in self.files:
+                chunk_path = f"{file_meta['file_name']}_{file_meta['chunk_id']}.mbc"
+            if os.path.exists(chunk_path):
+                os.remove(chunk_path)
 
 # Graphical User Interface (GUI)
 def launch_gui():
@@ -292,7 +292,7 @@ def main():
     if args.gui:
         launch_gui()
     else:
-        archive = MoonBallArchive()
+        archive = MoonBallArchive(encryption_key=None)
 
         if args.add:
             for item in args.add:
@@ -320,3 +320,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+       

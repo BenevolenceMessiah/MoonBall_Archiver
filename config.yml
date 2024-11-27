@@ -12,10 +12,10 @@ preset: 'default'
 custom_models:
   Text: distilbert-base-uncased
   Image: CLIP
-  Audio: wav2vec 2.0
-  Video: S3D
-  Structured_Data: TabNet
-  Code: CodeBERT
+  Audio: wav2vec2-base
+  Video: s3d-k400
+  Structured_Data: tabnet
+  Code: codebert
 
 # Multi-modal model preference (specifies the model to use if multi-modal is preferred)
 # Available options: CLIP, Florence
@@ -42,8 +42,8 @@ fallback_provider_settings:
     apiBase: "http://localhost:5000/v1"
 
 # Caching option for downloaded models (default is 'True')
-# Options: 'True', 'False'
-caching: 'True'
+# Options: 'true', 'false'
+caching: true
 
 # Model download location
 model_download_path: "./models"
@@ -62,15 +62,15 @@ compression_level: 9
 
 # Default chunk size in bytes for file indexing and compression
 # The chunk size is adaptive and determined based on the type of data and the compression algorithm used
-chunk_size: adaptive
+chunk_size: 5242880  # 5MB default chunk size
 
 # Error handling strategy
 # Options: 'continue', 'abort', 'retry'
 error_handling: "continue"
 
-# Auto update for models (default is 'True')
-# Options: 'True', 'False'
-auto_update_models: 'True'
+# Auto update for models (default is 'true')
+# Options: 'true', 'false'
+auto_update_models: true
 
 # Compression scheme for MoonBall Archiver
 # Options: 'fast', 'balanced', 'max'
@@ -85,32 +85,32 @@ preset_configs:
   speed:
     custom_models:
       Text: distilbert-base-uncased
-      Image: ResNet18
-      Audio: YAMNet
-      Video: S3D
-      Structured_Data: TabNet
+      Image: resnet18
+      Audio: yamnet
+      Video: s3d-k400
+      Structured_Data: tabnet
       Code: distilbert-base-uncased
-    multi_modal: 'False'
+    multi_modal: false
 
   accuracy:
     custom_models:
       Text: bert-base-uncased
       Image: CLIP
-      Audio: wav2vec 2.0
-      Video: I3D
-      Structured_Data: FT-Transformer
-      Code: CodeBERT
-    multi_modal: 'True'
+      Audio: wav2vec2-base
+      Video: i3d
+      Structured_Data: ft-transformer
+      Code: codebert
+    multi_modal: true
 
   default:
     custom_models:
       Text: distilbert-base-uncased
       Image: CLIP
-      Audio: wav2vec 2.0
-      Video: S3D
-      Structured_Data: TabNet
-      Code: CodeBERT
-    multi_modal: 'True'
+      Audio: wav2vec2-base
+      Video: s3d-k400
+      Structured_Data: tabnet
+      Code: codebert
+    multi_modal: true
 
 # Documentation for available custom models and arguments
 #
@@ -123,11 +123,11 @@ preset_configs:
 #
 # Custom model categories:
 #   Text: distilbert-base-uncased, bert-base-uncased
-#   Image: CLIP, ResNet50
-#   Audio: wav2vec 2.0, YAMNet
-#   Video: S3D, I3D
-#   Structured_Data: TabNet, FT-Transformer
-#   Code: CodeBERT, GPT-Neo
+#   Image: CLIP, resnet18
+#   Audio: wav2vec2-base, yamnet
+#   Video: s3d-k400, i3d
+#   Structured_Data: tabnet, ft-transformer
+#   Code: codebert, gpt-neo
 #
 # Multi-modal model options (for multi_modal_model setting):
 #   CLIP - Default multi-modal model for both text and image.

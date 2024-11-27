@@ -1,4 +1,4 @@
-# MoonBall Archiver (Rust Implementation)
+# MoonBall Archiver
 
 Welcome to **MoonBall Archiver**, a cutting-edge file compression and archiving solution designed to redefine the way we store and manage digital data. MoonBall is a forward-thinking, highly efficient, and AI-powered archiver that leverages advanced compression techniques to bring you the best currently possible performance for your storage needs. With a unique blend of machine learning, chunk-level adaptability, and interoperability, MoonBall aims to be the future of digital archiving.
 
@@ -19,7 +19,7 @@ The MoonBall Archiver first indexes and then divides files into logical chunks f
 
 ### Comprehensive Graphical User Interface (GUI)
 
-MoonBall includes a user-friendly GUI, implemented in **Rust** using **Egui**, allowing even beginners to easily compress and decompress files or directories. This interface provides features like:
+MoonBall includes a user-friendly GUI, implemented in both **Python** and  **Rust** (using **Egui** with **Rust**), allowing even beginners to easily compress and decompress files or directories. This interface provides features like:
 
 - Adding files or directories for compression
 - Saving the resulting MoonBall archive
@@ -62,6 +62,64 @@ MoonBall has been designed with extensibility at its core, allowing for future e
 - **Foreign Function Interface (FFI)**: To achieve interoperability, MoonBall leverages compression libraries via FFI, integrating with Python-based machine learning tools for tasks like embedding generation.
 - **Moon Integration**: Utilizing Moon's standard library modules for file I/O and other basic functionalities to streamline development and make MoonBall a perfect match for the Moon ecosystem.
 
+## How It Works
+
+MoonBall Archiver operates in a structured and efficient sequence to optimize the compression and management of digital data. This process ensures that files are stored in the most space-efficient manner while maintaining easy access and integrity:
+
+### 1. Indexing
+
+**Indexing** is the initial step where MoonBall Archiver creates a structured list of all files and logical chunks within those files. This metadata index acts as the backbone of the archiver, facilitating efficient retrieval and management of archived data.
+
+- **Functionality**: The archiver scans the specified files and directories, recording the structure, size, and other relevant metadata. This data is essential for subsequent steps like chunking and compression.
+- **Benefit**: By maintaining a detailed index, MoonBall ensures that data can be quickly located and processed during compression, decompression, and retrieval. The index is stored in a way that it can be easily accessible and quickly updated.
+
+### 2. Chunking
+
+**Chunking** involves dividing each file into smaller, manageable parts, known as **chunks**. Each chunk is processed independently to determine the best compression algorithm and embedding generation method.
+
+- **Functionality**: Files are split into chunks based on predefined criteria, such as size limits. This approach allows for more granular and efficient compression.
+- **Benefit**: Chunking reduces the computational overhead by processing smaller data segments and enables parallel processing, which significantly speeds up the compression process. It also helps in adapting compression strategies to the nature of different data types.
+
+### 3. Embeddings and Index Storage
+
+**Embeddings** are numerical representations of each chunk, generated using machine learning models. These embeddings capture the semantic context and content of data, which is crucial for advanced features like semantic search.
+
+- **Functionality**: For each chunk, MoonBall Archiver uses a pre-trained **Transformers** model to generate embeddings. These embeddings are stored alongside the index in the archive.
+- **Benefit**: Embeddings enable semantic analysis, data deduplication, and retrieval. They allow the archiver to cluster similar files and provide meaningful search results, even when the content is compressed.
+
+### 4. Compression
+
+**Compression** is the process of reducing the size of each chunk to save storage space. MoonBall Archiver applies different compression algorithms to each chunk based on its type and compressibility.
+
+- **Functionality**: For each chunk, the archiver evaluates several compression algorithms—such as Brotli, LZMA, and Zstandard—and selects the most suitable one based on machine learning predictions.
+- **Benefit**: By choosing the best compression algorithm for each chunk, MoonBall Archiver achieves higher overall compression ratios and better performance.
+
+### 5. Embeddings and Index Storage
+
+After compression, the embeddings and index are stored in the **header** of the MoonBall archive file. This metadata is crucial for efficient data retrieval and management.
+
+- **Functionality**: The index and embeddings are serialized and written to the beginning of the archive file.
+- **Benefit**: Storing metadata in the header allows for quick access during retrieval and is essential for features like semantic search, file lookup, and archive validation.
+
+### 6. Checksum Footer
+
+A **checksum** is computed for the index and embedded data to ensure the integrity and consistency of the archive.
+
+- **Functionality**: Using a hashing algorithm (e.g., SHA-256), the archiver generates a checksum of the metadata and attaches it to the end of the archive file.
+- **Benefit**: The checksum allows the archiver to verify the integrity of the metadata during extraction, ensuring that the data has not been tampered with or corrupted.
+
+### Example Workflow
+
+To illustrate the process, consider the following example:
+
+1. **Indexing**: The user adds a directory containing a project with multiple files (e.g., source code, images, and documentation).
+2. **Chunking**: The archiver splits the files into chunks. For example, source code files might be split into 5MB chunks.
+3. **Embeddings**: For each chunk, embeddings are generated using a Transformers model like **distilbert-base-uncased**. These embeddings capture the context and meaning of the data.
+4. **Compression**: Each chunk is compressed using an optimal algorithm. For instance, text-based chunks might use Zstandard, while image chunks might use Brotli.
+5. **Storage**: The embeddings and index are stored in the header of the archive file, along with the compressed chunks.
+6. **Checksum**: A checksum is generated and stored in the footer to ensure the archive's integrity.
+
+This structured approach ensures that MoonBall Archiver is highly efficient, adaptable, and reliable, making it the future of digital archiving.
 ## Key Terms
 
 ### Retrieval-Augmented Generation (RAG)

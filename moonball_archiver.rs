@@ -1,8 +1,5 @@
-// Enhanced MoonBall Archiver in Rust with GUI using Egui, Semantic Search, Encryption Options, and 2FA
-
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write, BufReader, BufWriter, Seek, SeekFrom};
-use std::path::Path;
 use zstd::stream::{copy_encode, copy_decode};
 use brotli;
 use lzma;
@@ -90,18 +87,32 @@ impl MoonBallArchive {
             }
             "lzma" => {
                 let mut output = Vec::new();
-                lzma::LzmaWriter::new_compressor(Vec::new(), 6)?.write_all(chunk)?;
+                lzma::LzmaWriter::new_compressor(Vec::new(), 6)?.write_all(chunk)?; // Compression level 6
                 output
             }
             _ => {
                 let mut output = Vec::new();
-                copy_encode(chunk, &mut output, 3)?;
+                copy_encode(chunk, &mut output, 3)?; // Zstd level 3
                 output
             }
         };
 
         // Generate embedding for the chunk using Python via FFI
-        let embedding = self.generate_embedding(chunk)?;
+        let base64_chunk = base64::encode(chunk);
+        let output = Command::new("python3")
+            .arg("generate_embedding.py")
+            .arg(base64_chunk)
+            .output()?;
+        
+        if !output.status.success() {
+            return Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to generate embedding: {}", String::from_utf8_lossy(&output.stderr)),
+            )));
+        }
+
+        let output_str = String::from_utf8(output.stdout)?;
+        let embedding: Vec<f32> = serde_json::from_str(&output_str)?;
 
         let metadata = ChunkMetadata {
             file_name: file_path.to_string(),
@@ -114,40 +125,20 @@ impl MoonBallArchive {
 
         self.metadata.chunks.push(metadata);
 
-        // Save compressed data to disk (this could be implemented differently if needed)
-        let output_file = File::create(format!("{}_{}.mbc", file_path, chunk_id))?;
-        let mut writer = BufWriter::new(output_file);
-        writer.write_all(&compressed_data)?;
-
-        // Add to memory cache
-        self.files.lock().unwrap().insert(format!("{}_{}.mbc", file_path, chunk_id), compressed_data);
+        // Save compressed data to memory cache
+        let mut files = self.files.lock().unwrap();
+        files.insert(format!("{}_{}.mbc", file_path, chunk_id), compressed_data);
 
         Ok(())
     }
 
     fn predict_compression_algo(&self, chunk: &[u8]) -> String {
         // Here you could use a more sophisticated method (e.g. ML model) to predict the best algorithm
-        if chunk.len() > 1024 {
+        if chunk.len() > 1024 * 1024 { // Example heuristic for choosing algorithms
             "brotli".to_string()
         } else {
             "zstd".to_string()
         }
-    }
-
-    fn generate_embedding(&self, chunk: &[u8]) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
-        // Call a Python script to generate embeddings using FFI
-        let output = Command::new("python3")
-            .arg("generate_embedding.py")
-            .arg(base64::encode(chunk))
-            .output()?;
-
-        if !output.status.success() {
-            return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Failed to generate embedding")));
-        }
-
-        let output_str = String::from_utf8(output.stdout)?;
-        let embedding: Vec<f32> = serde_json::from_str(&output_str)?;
-        Ok(embedding)
     }
 
     pub fn save_archive(&self, archive_path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -159,7 +150,7 @@ impl MoonBallArchive {
         writer.write_all(metadata_json.as_bytes())?;
         writer.write_all(b"\n")?;
 
-        // Write each chunk to the archive
+        // Write each chunk to the archive from memory cache
         for (file_name, data) in self.files.lock().unwrap().iter() {
             writer.write_all(data)?;
             writer.write_all(b"\n")?;
@@ -179,10 +170,16 @@ impl MoonBallArchive {
             let expected_otp = totp_custom::<Sha256>(secret_key, current_time, 30, 6, &RFC4648 { padding: false });
             if let Some(provided_otp) = otp {
                 if provided_otp != expected_otp {
-                    return Err(Box::new(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Invalid OTP")));
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::PermissionDenied,
+                        "Invalid OTP",
+                    )));
                 }
             } else {
-                return Err(Box::new(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "OTP required for extraction")));
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::PermissionDenied,
+                    "OTP required for extraction",
+                )));
             }
         }
 
@@ -193,7 +190,7 @@ impl MoonBallArchive {
         let metadata: ArchiveMetadata = serde_json::from_str(&metadata_str)?;
 
         // For each chunk in the archive, decompress and reconstruct the original file
-        for chunk_metadata in metadata.chunks {
+        for (index, chunk_metadata) in metadata.chunks.iter().enumerate() {
             let mut compressed_data = vec![0; chunk_metadata.compressed_size];
             reader.read_exact(&mut compressed_data)?;
             let output_path = Path::new(output_dir).join(&chunk_metadata.file_name);
@@ -215,4 +212,102 @@ impl MoonBallArchive {
 
         Ok(())
     }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let matches = App::new("MoonBall Archiver")
+        .version("1.0")
+        .author("Your Name <your.email@example.com>")
+        .about("A Rust implementation of MoonBall Archiver")
+        .arg(
+            Arg::with_name("add")
+                .short('a')
+                .long("add")
+                .value_name("FILES/DIRECTORIES")
+                .help("Files or directories to add to the archive")
+                .multiple(true)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("extract")
+                .short('e')
+                .long("extract")
+                .value_name("ARCHIVE")
+                .help("Archive to extract")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("output")
+                .short('o')
+                .long("output")
+                .value_name("DIR/FILENAME")
+                .help("Output directory or archive name")
+                .takes_value(true)
+                .required_unless_one(&["add", "gui"]),
+        )
+        .arg(
+            Arg::with_name("scheme")
+                .short('s')
+                .long("scheme")
+                .possible_values(&["fast", "balanced", "max"])
+                .default_value("balanced")
+                .help("Compression scheme"),
+        )
+        .arg(
+            Arg::with_name("extension")
+                .short('x')
+                .long("extension")
+                .possible_values(&["mnbl", "🌕"])
+                .default_value("mnbl")
+                .help("File extension for the archive"),
+        )
+        .arg(
+            Arg::with_name("gui")
+                .short('g')
+                .long("gui")
+                .help("Launch graphical user interface"),
+        )
+        .arg(
+            Arg::with_name("search")
+                .short('S')
+                .long("search")
+                .value_name("QUERY")
+                .help("Semantic search query")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    if matches.is_present("gui") {
+        // Launch GUI here (not implemented yet)
+        println!("GUI not implemented yet.");
+    } else if let Some(files) = matches.values_of("add") {
+        let output_path = matches.value_of("output").unwrap();
+        let extension = matches.value_of("extension").unwrap();
+
+        let mut archive = MoonBallArchive::new();
+        for file in files {
+            if Path::new(file).is_dir() {
+                // Add directory logic here (not implemented yet)
+                println!("Adding directory: {}", file);
+            } else {
+                archive.add_file(file, 5242880)?; // Default chunk size: 5MB
+            }
+        }
+
+        let final_output_path = format!("{}.{}", output_path, extension);
+        archive.save_archive(&final_output_path)?;
+        println!("Archive saved as {}", final_output_path);
+    } else if let Some(archive_path) = matches.value_of("extract") {
+        let output_dir = matches.value_of("output").unwrap();
+        let otp = matches.value_of("otp"); // OTP for 2FA (not implemented yet)
+        let mut archive = MoonBallArchive::new(); // Initialize with metadata
+        archive.extract(archive_path, output_dir, otp)?;
+        println!("Files extracted to {}", output_dir);
+    } else if let Some(query) = matches.value_of("search") {
+        let mut archive = MoonBallArchive::new(); // Initialize with metadata
+        let results = archive.semantic_search(query); // Implement semantic search in Rust (not implemented yet)
+        println!("Search results: {:?}", results);
+    }
+
+    Ok(())
 }
