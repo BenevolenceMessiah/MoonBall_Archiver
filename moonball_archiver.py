@@ -5,9 +5,9 @@ import lzma
 import hashlib
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
-from sklearn.ensemble import RandomForestClassifier  # Example ML model for decision-making
+from sklearn.ensemble import RandomForestClassifier
 import numpy as np
-from transformers import pipeline  # Transformers.js equivalent in Python for demonstration purposes
+from transformers import pipeline
 import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 import json
 import argparse
-from totp_generator import TOTP  # Assuming a simple TOTP implementation is available
+import pyotp
 
 class MoonBallArchive:
     def __init__(self, encryption_key=None):
@@ -202,7 +202,7 @@ class MoonBallArchive:
         elif algo == 'lzma':
             compressed_data = lzma.compress(data)
         else:
-            cctx = zstd.ZstdCompressor(level=self.config['compression_algorithms']['zstd']['level'])
+            cctx = zstd.ZstdCompressor(level=9)  # Adjust level as needed
             compressed_data = cctx.compress(data)
         return compressed_data
 
@@ -261,8 +261,13 @@ def launch_gui():
             return
         encryption_key = simpledialog.askstring("Encryption Key", "Enter the encryption key (if set):", show='*')
         archive = MoonBallArchive(encryption_key=encryption_key)
-        archive.extract(archive_path, output_dir)
-        messagebox.showinfo('Success', f'Files extracted to {output_dir}')
+        secret_key = 'your_secret_key_here'  # Replace with actual secret key
+        otp = simpledialog.askstring("2FA OTP", "Enter the 2FA OTP (if set):", show='*')
+        if verify_otp(secret_key, otp):
+            archive.extract(archive_path, output_dir)
+            messagebox.showinfo('Success', f'Files extracted to {output_dir}')
+        else:
+            messagebox.showerror('Error', 'Invalid OTP.')
 
     def semantic_search():
         query = simpledialog.askstring("Semantic Search", "Enter your search query:")
@@ -306,6 +311,10 @@ def launch_gui():
 
     root.mainloop()
 
+def verify_otp(secret_key, provided_otp):
+    totp = pyotp.TOTP(secret_key, digest="sha1", digits=6, interval=30)
+    return totp.verify(provided_otp)
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='MoonBall Archiver')
@@ -338,15 +347,13 @@ def main():
                 print('Please provide both the archive to extract and the output directory.')
                 return
             os.makedirs(args.output, exist_ok=True)
+            secret_key = 'your_secret_key_here'  # Replace with actual secret key
             otp = simpledialog.askstring("2FA OTP", "Enter the 2FA OTP (if set):", show='*')
-            if archive.config['two_factor_authentication']['enabled']:
-                secret_key = 'your_secret_key_here'  # Replace with actual secret key
-                totp = TOTP(secret_key, digest="sha1", digits=6, interval=30)
-                if otp != str(totp.generate()):
-                    print("Invalid OTP.")
-                    return
-            archive.extract(args.extract, args.output)
-            print(f'Files extracted to {args.output}')
+            if verify_otp(secret_key, otp):
+                archive.extract(args.extract, args.output)
+                print(f'Files extracted to {args.output}')
+            else:
+                print("Invalid OTP.")
         elif args.search:
             results = archive.semantic_search(args.search)
             if results:

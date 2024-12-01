@@ -33,6 +33,7 @@ RUN cargo build --release
 # Final stage with both Python and Rust binaries
 FROM base
 COPY --from=rust-build /app/target/release/moonball_archiver .
+COPY generate_embedding.py .
 
 # Run the CLI tool by default (this could be changed to start the GUI if needed)
 ENTRYPOINT ["./moonball_archiver"]

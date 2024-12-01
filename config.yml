@@ -112,6 +112,11 @@ preset_configs:
       Code: codebert
     multi_modal: true
 
+# Two-Factor Authentication (2FA) settings
+two_factor_authentication:
+  enabled: false
+  secret_key: "your_secret_key_here"  # Replace with an actual secret key
+
 # Documentation for available custom models and arguments
 #
 # Preset options:
