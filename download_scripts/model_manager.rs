@@ -1,32 +1,31 @@
-// model_manager.rs - Rust Model Manager for MoonBall Archiver
-
 use std::fs;
 use std::process::Command;
 use std::path::Path;
-use std::io;
-use std::error::Error;
+use log::{info, error};
 
 const MODEL_DOWNLOAD_PATH: &str = "./models";
 
 fn main() {
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info)
+        .init();
+
     match download_model("distilbert-base-uncased") {
-        Ok(_) => println!("Model downloaded successfully."),
-        Err(e) => eprintln!("Error downloading model: {}", e),
+        Ok(_) => info!("Model downloaded successfully."),
+        Err(e) => error!("Error downloading model: {}", e),
     }
 }
 
-// Function to download a model
-fn download_model(model_name: &str) -> Result<(), Box<dyn Error>> {
+fn download_model(model_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let model_path = format!("{}/{}", MODEL_DOWNLOAD_PATH, model_name);
     if Path::new(&model_path).exists() {
-        println!("Model '{}' already exists.", model_name);
+        info!("Model '{}' already exists.", model_name);
         return Ok(());
     }
 
     // Create the models directory if it doesn't exist
     fs::create_dir_all(MODEL_DOWNLOAD_PATH)?;
 
-    // Use a shell command to download the model (e.g., using wget or curl)
     let output = Command::new("curl")
         .arg("-L")
         .arg(format!("https://huggingface.co/{}/resolve/main/pytorch_model.bin", model_name))
@@ -35,8 +34,8 @@ fn download_model(model_name: &str) -> Result<(), Box<dyn Error>> {
         .output()?;
 
     if !output.status.success() {
-        return Err(Box::new(io::Error::new(
-            io::ErrorKind::Other,
+        return Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::Other,
             format!("Failed to download model: {}", String::from_utf8_lossy(&output.stderr)),
         )));
     }
@@ -44,31 +43,33 @@ fn download_model(model_name: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// Function to list available models in the models directory
-fn list_models() -> Result<(), Box<dyn Error>> {
+fn list_models() -> Result<(), Box<dyn std::error::Error>> {
     let paths = fs::read_dir(MODEL_DOWNLOAD_PATH)?;
 
+    if !paths.count() > 0 {
+        info!("No models available.");
+        return Ok(());
+    }
+
     for path in paths {
-        println!("Model: {}", path?.path().display());
+        info!("Model: {}", path?.path().display());
     }
 
     Ok(())
 }
 
-// Function to delete a model
-fn delete_model(model_name: &str) -> Result<(), Box<dyn Error>> {
+fn delete_model(model_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let model_path = format!("{}/{}", MODEL_DOWNLOAD_PATH, model_name);
     if Path::new(&model_path).exists() {
-        fs::remove_file(model_path)?;
-        println!("Model '{}' deleted successfully.", model_name);
+        fs::remove_file(&model_path)?;
+        info!("Model '{}' deleted successfully.", model_name);
     } else {
-        println!("Model '{}' not found.", model_name);
+        info!("Model '{}' not found.", model_name);
     }
 
     Ok(())
 }
 
-// Function to check if a model exists
 fn model_exists(model_name: &str) -> bool {
     let model_path = format!("{}/{}", MODEL_DOWNLOAD_PATH, model_name);
     Path::new(&model_path).exists()

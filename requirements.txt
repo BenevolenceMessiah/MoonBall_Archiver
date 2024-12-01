@@ -8,8 +8,10 @@ numpy==1.25.2
 transformers==4.33.0
 Pillow==10.0.0
 cryptography==41.0.3
-# tkinter ( Run "sudo apt-get install python3-tk" if you get any error on Linux)
+# tkinter ( Run "sudo apt-get install python3-tk" if you get any errors on Linux)
 tkinterdnd2==0.3.0
 concurrent-log-handler==0.9.24
 pytest==7.4.2
 torch>=1.9.0
+argparse
+pyotp==2.8.0

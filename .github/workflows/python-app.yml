@@ -33,6 +33,57 @@ jobs:
 
     - name: Run tests
       run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        pytest || true
+        pytest
+
+    - name: Build documentation
+      if: github.ref == 'refs/heads/main'
+      run: |
+        sphinx-build -b html docs/source docs/build/html
+
+    - name: Deploy documentation
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/build/html
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install --prefer-binary -r requirements.txt
+
+    - name: Run linters
+      run: |
+        flake8 .
+        mypy .
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install --prefer-binary -r requirements.txt
+
+    - name: Run security scanner
+      run: |
+        bandit -r .

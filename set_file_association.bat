@@ -1,4 +1,6 @@
 @echo off
+setlocal
+
 :menu
 cls
 echo =========================================
@@ -11,10 +13,10 @@ echo 4. Exit
 echo =========================================
 set /p choice="Enter your choice (1-4): "
 
-if '%choice%' == '1' goto backup_registry
-if '%choice%' == '2' goto create_restore_point
-if '%choice%' == '3' goto set_file_associations
-if '%choice%' == '4' goto exit
+if '%choice%'=='1' goto backup_registry
+if '%choice%'=='2' goto create_restore_point
+if '%choice%'=='3' goto set_file_associations
+if '%choice%'=='4' goto exit
 
 echo Invalid choice, please select an option between 1 and 4.
 pause
@@ -71,4 +73,5 @@ goto menu
 
 :exit
 echo Exiting the program.
+endlocal
 exit

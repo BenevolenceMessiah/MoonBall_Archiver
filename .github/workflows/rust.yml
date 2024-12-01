@@ -20,27 +20,70 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        components: rustfmt, clippy
         profile: minimal
+        override: true
 
-    - name: Cache Cargo registry
-      uses: actions/cache@v2
+    - name: Cache cargo registry and git dependencies
+      uses: Swatinem/rust-cache@v2
       with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Build Project
-      run: cargo build --release
+    - name: Build the Rust project
+      run: |
+        cargo build --release
 
-    - name: Run Tests
-      run: cargo test
+    - name: Run tests
+      run: |
+        cargo test --release
 
-    - name: Run Clippy
-      run: cargo clippy -- -D warnings
+    - name: Check for code formatting issues
+      run: |
+        cargo fmt --all --check
 
-    - name: Run Rustfmt
-      run: cargo fmt -- --check
+    - name: Clippy linting
+      run: |
+        cargo clippy -- -D warnings
+
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Run security scanner
+      run: |
+        cargo install cargo-audit
+        cargo audit --deny warnings
+
+  documentation:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Build documentation
+      run: |
+        cargo doc --release --no-deps
+
+    - name: Deploy documentation
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./target/doc

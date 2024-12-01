@@ -12,21 +12,29 @@ import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 from PIL import Image, ImageTk
-from cryptography.fernet import Fernet  # For encryption
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import base64
+import json
+import argparse
+from totp_generator import TOTP  # Assuming a simple TOTP implementation is available
 
 class MoonBallArchive:
     def __init__(self, encryption_key=None):
         self.files = []
         self.index = []
         self.encryption_key = encryption_key
-        self.encryption_cipher = Fernet(encryption_key) if encryption_key else None
-        # Placeholder for a trained ML model; in practice, load a pre-trained model
         self.ml_model = RandomForestClassifier()
-        # Load or initialize embedding model for indexing and retrieval
         self.embedding_model = pipeline('feature-extraction', model='distilbert-base-uncased')
+        self.load_config()
+
+    def load_config(self):
+        with open('config.yml', 'r') as config_file:
+            import yaml
+            self.config = yaml.safe_load(config_file)
 
     def add_file(self, file_path, chunk_size=5242880):  # Default chunk size: 5MB
-        # Read the file and split into chunks
         with open(file_path, 'rb') as f:
             chunk_id = 0
             while chunk := f.read(chunk_size):
@@ -34,20 +42,12 @@ class MoonBallArchive:
                 chunk_id += 1
 
     def compress_chunk(self, chunk, file_path, chunk_id):
-        # Use machine learning to determine the optimal compression algorithm
         algo = self.predict_compression_algo(file_path, chunk)
-        if algo == 'brotli':
-            compressed_data = brotli.compress(chunk)
-        elif algo == 'lzma':
-            compressed_data = lzma.compress(chunk)
-        else:
-            compressed_data = zstd.ZstdCompressor().compress(chunk)
+        compressed_data = self.compress_data(chunk, algo)
 
-        # Encrypt the compressed data if encryption is enabled
-        if self.encryption_cipher:
-            compressed_data = self.encryption_cipher.encrypt(compressed_data)
+        if self.encryption_key:
+            compressed_data = self.encrypt_data(compressed_data)
 
-        # Generate embedding for the chunk
         embedding = self.generate_embedding(chunk)
 
         chunk_entry = {
@@ -59,7 +59,7 @@ class MoonBallArchive:
             'data': compressed_data,
             'embedding': embedding
         }
-        
+
         self.files.append(chunk_entry)
         self.index.append({
             'file_name': file_path,
@@ -71,19 +71,13 @@ class MoonBallArchive:
         })
 
     def predict_compression_algo(self, file_path, chunk):
-        # Example features for ML model: file extension, chunk size, entropy (compression predictability)
-        file_extension = os.path.splitext(file_path)[1]
-        entropy = self.calculate_entropy(chunk)
-        features = np.array([[len(chunk), entropy]])
-
-        # Use ML model to predict the best algorithm
+        # Placeholder ML logic
+        features = np.array([[len(chunk), self.calculate_entropy(chunk)]])
         algo_index = self.ml_model.predict(features)[0]
         algo_map = {0: 'brotli', 1: 'lzma', 2: 'zstd'}
         return algo_map.get(algo_index, 'zstd')
 
     def calculate_entropy(self, data):
-        # Calculate entropy as a measure of randomness
-        import math
         if len(data) == 0:
             return 0
         byte_counts = [0] * 256
@@ -97,41 +91,39 @@ class MoonBallArchive:
         return entropy
 
     def generate_embedding(self, chunk):
-        # Generate embedding for the chunk using an embedding model
-        return self.embedding_model(chunk.tolist())[0][0]
+        base64_chunk = base64.b64encode(chunk).decode('utf-8')
+        output = Command('python3').args(['generate_embedding.py', base64_chunk]).output()
+        if not output.status.success():
+            raise Exception(f"Failed to generate embedding: {output.stderr}")
+        return json.loads(output.stdout)
 
     def add_files_parallel(self, file_paths):
         with ThreadPoolExecutor() as executor:
             list(tqdm(executor.map(self.add_file, file_paths), total=len(file_paths), desc='Indexing and Compressing Files'))
 
     def add_directory(self, dir_path):
-        # Recursively add all files from the directory and subdirectories
         for root, _, files in os.walk(dir_path):
             for file in files:
-                file_path = os.path.join(root, file)
-                self.add_file(file_path)
+                self.add_file(os.path.join(root, file))
 
     def save(self, archive_path):
         if not (archive_path.endswith(".mnbl") or archive_path.endswith("\U0001F315")):
             raise ValueError("Invalid file extension. Please use '.mnbl' or '.🌕' for the archive.")
-        
+
         with open(archive_path, 'wb') as archive:
-            # Write header (index as bytes)
             index_data = str(self.index).encode('utf-8')
-            if self.encryption_cipher:
-                index_data = self.encryption_cipher.encrypt(index_data)
+            if self.encryption_key:
+                index_data = self.encrypt_data(index_data)
             archive.write(index_data)
             archive.write(b'\n')
-            
-            # Write each file chunk
+
             for file in tqdm(self.files, desc='Writing chunks to archive'):
                 archive.write(file['data'])
                 archive.write(b'\n')
-            
-            # Write footer (checksum)
+
             checksum = hashlib.sha256(index_data).hexdigest().encode('utf-8')
-            if self.encryption_cipher:
-                checksum = self.encryption_cipher.encrypt(checksum)
+            if self.encryption_key:
+                checksum = self.encrypt_data(checksum)
             archive.write(checksum)
 
     def extract(self, archive_path, output_dir):
@@ -140,55 +132,96 @@ class MoonBallArchive:
 
         with open(archive_path, 'rb') as archive:
             lines = archive.readlines()
-            
-            # Read index from header
-            index_data = lines[0]
-            if self.encryption_cipher:
-                index_data = self.encryption_cipher.decrypt(index_data)
+
+            index_data = lines[0].strip()
+            if self.encryption_key:
+                index_data = self.decrypt_data(index_data)
             index_data = eval(index_data.decode('utf-8'))
-            
-            # Extract chunks based on index
+
             for file_meta in tqdm(index_data, desc='Extracting chunks'):
                 compressed_data = lines[file_meta['chunk_id'] + 1].strip()
-                
-                # Decrypt the compressed data if encryption is enabled
-                if self.encryption_cipher:
-                    compressed_data = self.encryption_cipher.decrypt(compressed_data)
-                
-                # Decompress based on algorithm
-                if file_meta['compression_algo'] == 'brotli':
-                    data = brotli.decompress(compressed_data)
-                elif file_meta['compression_algo'] == 'lzma':
-                    data = lzma.decompress(compressed_data)
-                else:
-                    data = zstd.ZstdDecompressor().decompress(compressed_data)
-                
-                # Write the chunk to the output file
+
+                if self.encryption_key:
+                    compressed_data = self.decrypt_data(compressed_data)
+
+                decompressed_data = self.decompress_data(compressed_data, file_meta['compression_algo'])
+
                 output_path = os.path.join(output_dir, os.path.basename(file_meta['file_name']))
                 mode = 'wb' if file_meta['chunk_id'] == 0 else 'ab'
                 with open(output_path, mode) as out_file:
-                    out_file.write(data)
+                    out_file.write(decompressed_data)
 
     def semantic_search(self, query):
-        # Generate embedding for the search query
         query_embedding = self.embedding_model([query])[0][0]
-
-        # Compare with stored embeddings and return relevant files
         results = []
         for file_meta in self.index:
-            similarity = np.dot(query_embedding, file_meta['embedding'])  # Simplified similarity calculation
-            if similarity > 0.8:  # Threshold for relevance
+            similarity = np.dot(query_embedding, file_meta['embedding'])
+            if similarity > self.config['semantic_search']['threshold']:
                 results.append(file_meta['file_name'])
         return results
 
-        def clean_up_temporary_files(self):
-        # Remove any temporary files created during compression or extraction
-            for file_meta in self.files:
-                chunk_path = f"{file_meta['file_name']}_{file_meta['chunk_id']}.mbc"
+    def encrypt_data(self, data):
+        salt = os.urandom(16)
+        kdf = PBKDF2HMAC(
+            algorithm=hashlib.sha256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(self.encryption_key.encode('utf-8')))
+        iv = os.urandom(16)
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        padder = self.padding.PKCS7(algorithms.AES.block_size).padder()
+        padded_data = padder.update(data) + padder.finalize()
+        encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+        return salt + iv + encrypted_data
+
+    def decrypt_data(self, data):
+        salt = data[:16]
+        iv = data[16:32]
+        kdf = PBKDF2HMAC(
+            algorithm=hashlib.sha256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+            backend=default_backend()
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(self.encryption_key.encode('utf-8')))
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_padded_data = decryptor.update(data[32:]) + decryptor.finalize()
+        unpadder = self.padding.PKCS7(algorithms.AES.block_size).unpadder()
+        decrypted_data = unpadder.update(decrypted_padded_data) + unpadder.finalize()
+        return decrypted_data
+
+    def compress_data(self, data, algo):
+        if algo == 'brotli':
+            compressed_data = brotli.compress(data)
+        elif algo == 'lzma':
+            compressed_data = lzma.compress(data)
+        else:
+            cctx = zstd.ZstdCompressor(level=self.config['compression_algorithms']['zstd']['level'])
+            compressed_data = cctx.compress(data)
+        return compressed_data
+
+    def decompress_data(self, data, algo):
+        if algo == 'brotli':
+            decompressed_data = brotli.decompress(data)
+        elif algo == 'lzma':
+            decompressed_data = lzma.decompress(data)
+        else:
+            dctx = zstd.ZstdDecompressor()
+            decompressed_data = dctx.decompress(data)
+        return decompressed_data
+
+    def clean_up_temporary_files(self):
+        for file_meta in self.files:
+            chunk_path = f"{file_meta['file_name']}_{file_meta['chunk_id']}.mbc"
             if os.path.exists(chunk_path):
                 os.remove(chunk_path)
 
-# Graphical User Interface (GUI)
 def launch_gui():
     def add_files():
         files = filedialog.askopenfilenames()
@@ -210,7 +243,6 @@ def launch_gui():
         if not output_path:
             return
         encryption_key = simpledialog.askstring("Encryption Key", "Enter an encryption key (or leave blank for no encryption):", show='*')
-        encryption_key = encryption_key.encode() if encryption_key else None
         archive = MoonBallArchive(encryption_key=encryption_key)
         for item in files:
             if os.path.isdir(item):
@@ -218,7 +250,6 @@ def launch_gui():
             else:
                 archive.add_file(item)
         archive.save(output_path)
-        archive.clean_up_temporary_files()
         messagebox.showinfo('Success', f'Archive saved as {output_path}')
 
     def extract_archive():
@@ -229,7 +260,6 @@ def launch_gui():
         if not output_dir:
             return
         encryption_key = simpledialog.askstring("Encryption Key", "Enter the encryption key (if set):", show='*')
-        encryption_key = encryption_key.encode() if encryption_key else None
         archive = MoonBallArchive(encryption_key=encryption_key)
         archive.extract(archive_path, output_dir)
         messagebox.showinfo('Success', f'Files extracted to {output_dir}')
@@ -246,10 +276,9 @@ def launch_gui():
     root.title('MoonBall Archiver')
     root.geometry('600x500')
 
-    # Add MoonBall logo to the GUI
     try:
-        moonball_logo = Image.open(os.path.join('assets', 'moonball_icon.png'))
-        moonball_logo = moonball_logo.resize((50, 50), Image.ANTIALIAS)
+        moonball_logo = Image.open(os.path.join('assets', 'moonball_file.ico'))
+        moonball_logo = moonball_logo.resize((50, 50), Image.LANCZOS)
         logo_img = ImageTk.PhotoImage(moonball_logo)
         logo_label = tk.Label(root, image=logo_img)
         logo_label.image = logo_img
@@ -277,8 +306,8 @@ def launch_gui():
 
     root.mainloop()
 
-# Command Line Interface (CLI)
 def main():
+    import argparse
     parser = argparse.ArgumentParser(description='MoonBall Archiver')
     parser.add_argument('--add', type=str, nargs='+', help='Files or directories to add to the archive')
     parser.add_argument('--extract', type=str, help='Archive to extract')
@@ -292,7 +321,8 @@ def main():
     if args.gui:
         launch_gui()
     else:
-        archive = MoonBallArchive(encryption_key=None)
+        encryption_key = simpledialog.askstring("Encryption Key", "Enter an encryption key (or leave blank for no encryption):", show='*') if args.add or args.extract else None
+        archive = MoonBallArchive(encryption_key=encryption_key)
 
         if args.add:
             for item in args.add:
@@ -302,13 +332,19 @@ def main():
                     archive.add_file(item)
             archive_name = args.output if args.output else f'archive.{args.extension}'
             archive.save(archive_name)
-            archive.clean_up_temporary_files()
             print(f'Archive saved as {archive_name}')
         elif args.extract:
             if not args.extract or not args.output:
                 print('Please provide both the archive to extract and the output directory.')
                 return
             os.makedirs(args.output, exist_ok=True)
+            otp = simpledialog.askstring("2FA OTP", "Enter the 2FA OTP (if set):", show='*')
+            if archive.config['two_factor_authentication']['enabled']:
+                secret_key = 'your_secret_key_here'  # Replace with actual secret key
+                totp = TOTP(secret_key, digest="sha1", digits=6, interval=30)
+                if otp != str(totp.generate()):
+                    print("Invalid OTP.")
+                    return
             archive.extract(args.extract, args.output)
             print(f'Files extracted to {args.output}')
         elif args.search:
@@ -320,4 +356,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-       
